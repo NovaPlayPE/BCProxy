@@ -7,9 +7,6 @@ import java.util.*;
  */
 public class ConfigSection extends LinkedHashMap<String, Object> {
 
-    /**
-     * Empty ConfigSection constructor
-     */
     public ConfigSection() {
         super();
     }

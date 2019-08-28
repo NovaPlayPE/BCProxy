@@ -33,7 +33,7 @@ public class ClientHandler extends SimpleChannelInboundHandler<Packet> {
 
     protected void channelRead0(ChannelHandlerContext ctx, Packet packet) throws Exception {
         for(PacketHandler handler : NettyHandler.getPacketHandlers()) {
-            handler.incomingPacket(packet, channel);
+            handler.receivePacket(packet, channel);
         }
         if(packet instanceof ErrorPacket) {
             String message = ((ErrorPacket)packet).getErrorMessage();

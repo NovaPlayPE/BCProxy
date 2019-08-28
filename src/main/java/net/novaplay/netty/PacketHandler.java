@@ -54,7 +54,7 @@ public abstract class PacketHandler {
         }
     }
 
-    public abstract void incomingPacket(Packet packet, Channel channel);
+    public abstract void receivePacket(Packet packet, Channel channel);
 
     public abstract void registerPackets();
 
