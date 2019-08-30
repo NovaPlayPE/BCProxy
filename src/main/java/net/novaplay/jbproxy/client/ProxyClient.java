@@ -10,6 +10,7 @@ public class ProxyClient {
 	
 	private Map<String,Player> players = new HashMap<String,Player>();
 	
+	
 	private String serverId;
 	private String address;
 	private String port;
@@ -24,9 +25,24 @@ public class ProxyClient {
 		this.setOnline(true);
 	}
 	
+	public void addPlayer(Player player) {
+		if(!players.containsKey(player.getName())) {
+			players.put(player.getName(),player);
+		}
+	}
+	
+	public void removePlayer(String name) {
+		if(players.containsKey(name)) {
+			players.remove(name);
+		}
+	}
+	
 	public Map<String,Player> getOnlinePlayers(){
 		return players;
 	}
 	
-
+	public int getPlayerCount() {
+		return players.size();
+	}
+	
 }

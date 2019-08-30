@@ -3,6 +3,7 @@ package net.novaplay.jbproxy.player;
 import java.util.*;
 
 import net.novaplay.jbproxy.client.ProxyClient;
+import net.novaplay.netty.packet.Packet;
 
 public class Player {
 
@@ -27,6 +28,12 @@ public class Player {
 	
 	public void sendTitle(String title) {}
 	public void sendTitle(String title, String subtitle) {}
+	
+	public void transfer() {};
+	
+	public void handleDataPacket(Packet packet) {
+		
+	}
 	
 	public String getName() {
 		return this.name;

@@ -18,6 +18,7 @@ import net.novaplay.jbproxy.client.ProxyClient;
 import net.novaplay.jbproxy.config.Config;
 import net.novaplay.jbproxy.config.ConfigSection;
 import net.novaplay.jbproxy.player.Player;
+import net.novaplay.jbproxy.protocol.ProxyConnectPacket;
 import net.novaplay.jbproxy.scheduler.ServerScheduler;
 import net.novaplay.jbproxy.session.SessionManager;
 import net.novaplay.jbproxy.utils.Logger;
@@ -121,7 +122,9 @@ public class Server {
 	}
 	
 	public void handleProxyPackets(Packet packet, Channel channel) {
-		
+		if(packet instanceof ProxyConnectPacket) {
+			
+		}
 	}
 	
 	public void refreshClients() {
@@ -130,6 +133,7 @@ public class Server {
 	
 	public ProxyClient registerNewClient(String serverId, String port, String address) {
 		ProxyClient client = new ProxyClient(serverId, address, port);
+		clients.put(serverId.toLowerCase(),client);
 		return client;
 	}
 	
