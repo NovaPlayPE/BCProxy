@@ -18,6 +18,9 @@ import net.novaplay.jbproxy.client.ProxyClient;
 import net.novaplay.jbproxy.config.Config;
 import net.novaplay.jbproxy.config.ConfigSection;
 import net.novaplay.jbproxy.player.Player;
+import net.novaplay.jbproxy.plugin.PluginManager;
+import net.novaplay.jbproxy.plugin.SimplePluginManager;
+import net.novaplay.jbproxy.protocol.IPlayerPacket;
 import net.novaplay.jbproxy.protocol.ProxyConnectPacket;
 import net.novaplay.jbproxy.scheduler.ServerScheduler;
 import net.novaplay.jbproxy.session.SessionManager;
@@ -38,6 +41,7 @@ public class Server {
     @Getter
     public ServerScheduler scheduler = null;
     private SessionManager sessionManager = null;
+    private PluginManager pluginManager = null;
     
     private Config properties;
     private Config clientConfig;
@@ -82,8 +86,7 @@ public class Server {
                 put("async-workers", "auto");
                 put("enable-profiling", false);
                 put("profile-report-trigger", 20);
-                put("max-players", 20);
-                put("players-per-thread", 50);
+                put("max-players", 100);
                 //put("rcon.password", Base64.getEncoder().encodeToString(UUID.randomUUID().toString().replace("-", "").getBytes()).substring(3, 13));
                 put("debug", 1);
                 put("display-stats-in-title", true);
@@ -109,8 +112,15 @@ public class Server {
         }
         ServerScheduler.WORKERS = (int) poolSize;
         scheduler = new ServerScheduler();
+        
+        pluginManager = new SimplePluginManager(this);
+        
         sessionManager = new SessionManager(this, getPort());
         sessionManager.start();
+	}
+	
+	public PluginManager getPluginManager() {
+		return this.pluginManager;
 	}
 	
 	public SessionManager getSessionManager() {
@@ -124,6 +134,8 @@ public class Server {
 	public void handleProxyPackets(Packet packet, Channel channel) {
 		if(packet instanceof ProxyConnectPacket) {
 			
+		} if(packet instanceof IPlayerPacket) {
+			players.forEach((id,pla) -> {pla.handleDataPacket(packet);});
 		}
 	}
 	
