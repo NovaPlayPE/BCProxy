@@ -13,12 +13,12 @@ public class ProxyClient {
 	
 	private String serverId;
 	private String address;
-	private String port;
+	private int port;
 	@Getter
 	@Setter
 	public boolean isOnline;
 	
-	public ProxyClient(String serverId, String address, String port) {
+	public ProxyClient(String serverId, String address, int port) {
 		this.serverId = serverId;
 		this.address = address;
 		this.port = port;

@@ -143,7 +143,7 @@ public class Server {
 		
 	}
 	
-	public ProxyClient registerNewClient(String serverId, String port, String address) {
+	public ProxyClient registerNewClient(String serverId, int port, String address) {
 		ProxyClient client = new ProxyClient(serverId, address, port);
 		clients.put(serverId.toLowerCase(),client);
 		return client;
