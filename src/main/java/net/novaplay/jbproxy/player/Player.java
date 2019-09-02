@@ -5,7 +5,7 @@ import java.util.*;
 import net.novaplay.jbproxy.client.ProxyClient;
 import net.novaplay.jbproxy.event.packet.PacketReceiveEvent;
 import net.novaplay.jbproxy.server.Server;
-import net.novaplay.netty.packet.Packet;
+import net.novaplay.library.netty.packet.Packet;
 
 public class Player {
 

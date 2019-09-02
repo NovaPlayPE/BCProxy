@@ -20,12 +20,12 @@ import net.novaplay.jbproxy.config.ConfigSection;
 import net.novaplay.jbproxy.player.Player;
 import net.novaplay.jbproxy.plugin.PluginManager;
 import net.novaplay.jbproxy.plugin.SimplePluginManager;
-import net.novaplay.jbproxy.protocol.IPlayerPacket;
-import net.novaplay.jbproxy.protocol.ProxyConnectPacket;
+import net.novaplay.networking.IPlayerPacket;
+import net.novaplay.networking.ProxyConnectPacket;
 import net.novaplay.jbproxy.scheduler.ServerScheduler;
 import net.novaplay.jbproxy.session.SessionManager;
 import net.novaplay.jbproxy.utils.Logger;
-import net.novaplay.netty.packet.Packet;
+import net.novaplay.library.netty.packet.Packet;
 
 public class Server {
 

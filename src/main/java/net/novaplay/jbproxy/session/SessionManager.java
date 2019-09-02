@@ -1,11 +1,11 @@
 package net.novaplay.jbproxy.session;
 
-import net.novaplay.callback.Callback;
+import net.novaplay.library.callback.Callback;
 import net.novaplay.jbproxy.server.Server;
-import net.novaplay.netty.ConnectionListener;
-import net.novaplay.netty.NettyHandler;
-import net.novaplay.netty.PacketHandler;
-import net.novaplay.netty.packet.Packet;
+import net.novaplay.library.netty.ConnectionListener;
+import net.novaplay.library.netty.NettyHandler;
+import net.novaplay.library.netty.PacketHandler;
+import net.novaplay.library.netty.packet.Packet;
 
 import java.io.*;
 import java.util.*;

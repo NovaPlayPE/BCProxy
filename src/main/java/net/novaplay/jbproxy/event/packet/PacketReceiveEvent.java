@@ -3,7 +3,7 @@ package net.novaplay.jbproxy.event.packet;
 import net.novaplay.jbproxy.event.HandlerList;
 import net.novaplay.jbproxy.event.Cancellable;
 import net.novaplay.jbproxy.player.Player;
-import net.novaplay.netty.packet.Packet;
+import net.novaplay.library.netty.packet.Packet;
 
 public class PacketReceiveEvent extends PacketEvent implements Cancellable {
 
