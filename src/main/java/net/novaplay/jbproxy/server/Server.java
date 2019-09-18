@@ -20,10 +20,12 @@ import net.novaplay.jbproxy.config.ConfigSection;
 import net.novaplay.jbproxy.player.Player;
 import net.novaplay.jbproxy.plugin.PluginManager;
 import net.novaplay.jbproxy.plugin.SimplePluginManager;
+import net.novaplay.jbproxy.plugin.java.JavaPluginLoader;
 import net.novaplay.networking.IPlayerPacket;
 import net.novaplay.networking.ProxyConnectPacket;
 import net.novaplay.jbproxy.scheduler.ServerScheduler;
 import net.novaplay.jbproxy.session.SessionManager;
+import net.novaplay.jbproxy.utils.Color;
 import net.novaplay.jbproxy.utils.Logger;
 import net.novaplay.library.netty.packet.Packet;
 
@@ -78,6 +80,7 @@ public class Server {
         }
         this.dataPath = new File(dataPath).getAbsolutePath() + "/";
         this.pluginPath = new File(pluginPath).getAbsolutePath() + "/";
+        this.logger.info(Color.GREEN + "Loading " + Color.WHITE + "server.properties");
         this.properties = new Config(this.dataPath + "server.properties", Config.PROPERTIES, new ConfigSection() {
             {
                 put("proxy-ip", "0.0.0.0");
@@ -114,6 +117,8 @@ public class Server {
         scheduler = new ServerScheduler();
         
         pluginManager = new SimplePluginManager(this);
+        pluginManager.registerInterface(JavaPluginLoader.class);
+        pluginManager.loadPlugins(this.pluginPath);
         
         sessionManager = new SessionManager(this, getPort());
         sessionManager.start();
