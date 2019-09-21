@@ -11,6 +11,7 @@ import java.util.regex.Pattern;
 
 import net.novaplay.jbproxy.plugin.Plugin;
 import net.novaplay.jbproxy.plugin.PluginDescription;
+import net.novaplay.jbproxy.plugin.PluginException;
 import net.novaplay.jbproxy.plugin.PluginLoader;
 import net.novaplay.jbproxy.server.Server;
 import net.novaplay.jbproxy.utils.Utils;
@@ -25,14 +26,41 @@ public class JavaPluginLoader implements PluginLoader {
     
 	@Override
 	public Plugin loadPlugin(String filename) throws Exception {
-		// TODO Auto-generated method stub
-		return null;
+		return loadPlugin(new File(filename));
 	}
 
 	@Override
 	public Plugin loadPlugin(File file) throws Exception {
-		// TODO Auto-generated method stub
+		PluginDescription dscrpt = getPluginDescription(file);
+		if(dscrpt != null) {
+			server.getLogger().info("Loading plugin " + dscrpt.getFullName());
+			File folder = new File(file.getParentFile(),dscrpt.getName());
+			String className = dscrpt.getMain();
+			JavaClassLoader loader = new JavaClassLoader(this, this.getClass().getClassLoader(),file);
+			classLoaders.put(dscrpt.getName(),loader);
+			JavaPlugin plugin = null;
+			try {
+				Class clazz = loader.loadClass(className);
+				try {
+					Class<? extends JavaPlugin> pluginClass = clazz.asSubclass(JavaPlugin.class);
+					plugin = pluginClass.newInstance();
+					setup(plugin,dscrpt, folder,file);
+					return plugin;
+				} catch(ClassCastException e) {
+					throw new PluginException("Main class "+ dscrpt.getMain() +" should extends JavaPlugin, but extends " + clazz.getSuperclass().getSimpleName());
+				} catch(InstantiationException | IllegalAccessException e) {
+					Server.getInstance().getLogger().logException(e);
+				}
+			} catch(ClassNotFoundException e) {
+				throw new PluginException("Class " + dscrpt.getMain() + " not found, plugin cannot be loaded");
+			}
+		}
 		return null;
+	}
+	
+	public void setup(JavaPlugin plugin, PluginDescription desc, File data, File file) {
+		plugin.init(this, this.server, desc,data,file);
+		plugin.onLoad();
 	}
 
 	@Override
@@ -60,8 +88,7 @@ public class JavaPluginLoader implements PluginLoader {
 
 	@Override
 	public Pattern[] getPluginFilters() {
-		// TODO Auto-generated method stub
-		return null;
+		return new Pattern[]{Pattern.compile("^.+\\.jar$")};
 	}
 
 	@Override
@@ -84,7 +111,26 @@ public class JavaPluginLoader implements PluginLoader {
 		}
 	}
 	
+	public Class<?> getClassByName(final String name) throws ClassNotFoundException{
+		Class<?> clazz = classes.get(name);
+		try {
+			for(JavaClassLoader loader : classLoaders.values()) {
+				try {
+					clazz = loader.findClass(name,false);
+				} catch(NullPointerException e) {
+				}
+			}
+			return clazz;
+		} catch(NullPointerException s) {
+			return null;
+		}
+	}
 	
+	public void setClass(String name, final Class<?> clazz) {
+		if(!classes.containsKey(name)) {
+			classes.put(name,clazz);
+		}
+	}
 	
 	protected void removeClass(String name) {
 		Class<?> clazz = classes.remove(name);

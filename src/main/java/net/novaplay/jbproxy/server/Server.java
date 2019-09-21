@@ -1,6 +1,8 @@
 package net.novaplay.jbproxy.server;
 
 import java.io.File;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
@@ -18,11 +20,12 @@ import net.novaplay.jbproxy.client.ProxyClient;
 import net.novaplay.jbproxy.config.Config;
 import net.novaplay.jbproxy.config.ConfigSection;
 import net.novaplay.jbproxy.player.Player;
+import net.novaplay.jbproxy.plugin.Plugin;
 import net.novaplay.jbproxy.plugin.PluginManager;
 import net.novaplay.jbproxy.plugin.SimplePluginManager;
 import net.novaplay.jbproxy.plugin.java.JavaPluginLoader;
 import net.novaplay.networking.IPlayerPacket;
-import net.novaplay.networking.ProxyConnectPacket;
+import net.novaplay.networking.server.ProxyConnectPacket;
 import net.novaplay.jbproxy.scheduler.ServerScheduler;
 import net.novaplay.jbproxy.session.SessionManager;
 import net.novaplay.jbproxy.utils.Color;
@@ -116,16 +119,27 @@ public class Server {
         ServerScheduler.WORKERS = (int) poolSize;
         scheduler = new ServerScheduler();
         
+        this.logger.info(Color.GREEN + "Loading all plugins");
         pluginManager = new SimplePluginManager(this);
         pluginManager.registerInterface(JavaPluginLoader.class);
         pluginManager.loadPlugins(this.pluginPath);
+        enablePlugins();
         
+        this.logger.info(Color.GREEN + "Creating netty server");
         sessionManager = new SessionManager(this, getPort());
         sessionManager.start();
 	}
 	
 	public PluginManager getPluginManager() {
 		return this.pluginManager;
+	}
+	
+	public void enablePlugins() {
+		for(Plugin plugin : getPluginManager().getPlugins().values()) {
+			if(!plugin.isEnabled()) {
+				getPluginManager().enablePlugin(plugin);
+			}
+		}
 	}
 	
 	public SessionManager getSessionManager() {
@@ -138,8 +152,47 @@ public class Server {
 	
 	public void handleProxyPackets(Packet packet, Channel channel) {
 		if(packet instanceof ProxyConnectPacket) {
+			if(getSessionManager().getVerifiedChannels().contains(channel)) {
+				return;
+			}
+			ProxyConnectPacket pk = (ProxyConnectPacket)packet;
+			if(pk.address.equalsIgnoreCase("0.0.0.0")) {
+				pk.address = "localhost";
+			}
+			ProxyClient client = getClientByName(pk.serverId);
+			if(client == null) {
+				pk.success = false;
+				getSessionManager().sendPacket(pk,channel);
+				return;
+			}
+			try {
+				InetAddress add1 = InetAddress.getByName(pk.address);
+				InetAddress add2 = InetAddress.getByName(client.getAddress());
+				if(add1 != add2) {
+					pk.success = false;
+					getSessionManager().sendPacket(pk,channel);
+					return;
+				}
+			} catch(UnknownHostException e) {
+				return;
+			}
+			if(client.getPort() != pk.port) {
+				pk.success = false;
+				getSessionManager().sendPacket(pk,channel);
+				return;
+			}
+			if(!client.isOnline()) {
+				client.setOnline(true);
+			}
+			getSessionManager().getVerifiedChannels().add(channel);
+			this.logger.info(Color.GREEN + "Client " + pk.serverId + " [" + pk.address + ":" + pk.port + "] connected");
+			getSessionManager().sendPacket(pk,channel);
 			
-		} if(packet instanceof IPlayerPacket) {
+		} if(getSessionManager().getVerifiedChannels().contains(channel)) {
+			return;
+		} 
+		
+		if(packet instanceof IPlayerPacket) {
 			players.forEach((id,pla) -> {pla.handleDataPacket(packet);});
 		}
 	}
@@ -159,7 +212,24 @@ public class Server {
 	}
 	
 	public Map<String,ProxyClient> getOnlineClients(){
+		Map<String,ProxyClient> clients = new HashMap<String,ProxyClient>();
+		for(Map.Entry<String,ProxyClient> connected : getClients().entrySet()) {
+			if(connected.getValue().isOnline()) {
+				clients.put(connected.getKey(),connected.getValue());
+			}
+		}
 		return clients;
+	}
+	
+	public Map<String,ProxyClient> getClients(){
+		return clients;
+	}
+	
+	public ProxyClient getOnlineCLientByName(String name) {
+		if(getOnlineClients().containsKey(name.toLowerCase())) {
+			return getOlineClients().get(name.toLowerCase());
+		}
+		return null;
 	}
 	
 	public ProxyClient getClientByName(String name) {

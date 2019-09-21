@@ -21,6 +21,7 @@ public class JavaPlugin implements Plugin {
 
 	
 	private Logger logger = null;
+	private boolean initialized = false;
 	private boolean enabled = false;
 	private Config config = null;
 	private File file = null;
@@ -28,6 +29,7 @@ public class JavaPlugin implements Plugin {
 	private File dataFolder = null;
 	private Server server = null;
 	private PluginDescription description = null;
+	private PluginLoader loader = null;
 	
 	@Override
 	public void onLoad() {
@@ -65,6 +67,19 @@ public class JavaPlugin implements Plugin {
 		return this.description;
 	}
 
+	public void init(PluginLoader loader, Server server,PluginDescription desc, File data, File file) {
+		if(!initialized) {
+			initialized = true;
+			this.loader = loader;
+			this.server = server;
+			this.description = desc;
+			this.dataFolder = data;
+			this.file = file;
+			this.configurationFile = new File(this.dataFolder,"config.yml");
+			this.logger = this.server.getLogger();
+		}
+	}
+	
 	@Override
 	public InputStream getResource(String filename) {
 		return this.getClass().getClassLoader().getResourceAsStream(filename);
@@ -157,8 +172,7 @@ public class JavaPlugin implements Plugin {
 
 	@Override
 	public PluginLoader getPluginLoader() {
-		// TODO Auto-generated method stub
-		return null;
+		return this.loader;
 	}
 
 }

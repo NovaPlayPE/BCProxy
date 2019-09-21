@@ -16,13 +16,12 @@ public class ProxyClient {
 	private int port;
 	@Getter
 	@Setter
-	public boolean isOnline;
+	public boolean isOnline = false;
 	
 	public ProxyClient(String serverId, String address, int port) {
 		this.serverId = serverId;
 		this.address = address;
 		this.port = port;
-		this.setOnline(true);
 	}
 	
 	public void addPlayer(Player player) {
@@ -43,6 +42,18 @@ public class ProxyClient {
 	
 	public int getPlayerCount() {
 		return players.size();
+	}
+	
+	public String getAddress() {
+		return address;
+	}
+	
+	public String getServerId() {
+		return serverId;
+	}
+	
+	public int getPort() {
+		return port;
 	}
 	
 }
