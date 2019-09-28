@@ -1,7 +1,9 @@
 package net.novaplay.jbproxy.session;
 
 import net.novaplay.library.callback.Callback;
+import net.novaplay.jbproxy.client.ProxyClient;
 import net.novaplay.jbproxy.server.Server;
+import net.novaplay.jbproxy.utils.Utils;
 import net.novaplay.library.netty.ConnectionListener;
 import net.novaplay.library.netty.NettyHandler;
 import net.novaplay.library.netty.PacketHandler;
@@ -48,7 +50,34 @@ public class SessionManager {
 				
 			}
 		};
+		connectionListener = new ConnectionListener() {
+			@Override
+			public void channelConnected(ChannelHandlerContext context) {
+				
+			}
+			
+			@Override
+			public void channelDisconnected(ChannelHandlerContext context) {
+				if(verifiedChannels.contains(context.channel())) {
+					ProxyClient client = server.getClientByName(nettyHandler.getClientnameByChannel(context.channel()));
+					try {
+						client.setOnline(false);
+						server.getLogger().info("Server " + client.getServerId() +" disconnected");
+					} catch(NullPointerException e) {
+						server.getLogger().logException(e);
+					}
+					verifiedChannels.remove(context.channel());
+				}
+			}
+			
+		};
+		
+		
+		
+		
+		
 		nettyHandler.registerPacketHandler(packetHandler);
+		nettyHandler.registerConnectionListener(connectionListener);
 		server.refreshClients();
 	}
 	

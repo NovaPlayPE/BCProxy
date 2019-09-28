@@ -5,6 +5,7 @@ import java.util.*;
 import lombok.Getter;
 import lombok.Setter;
 import net.novaplay.jbproxy.player.Player;
+import net.novaplay.networking.types.ConnectType;
 
 public class ProxyClient {
 	
@@ -14,14 +15,22 @@ public class ProxyClient {
 	private String serverId;
 	private String address;
 	private int port;
+	private ConnectType serverType = ConnectType.JAVA;
 	@Getter
 	@Setter
 	public boolean isOnline = false;
 	
-	public ProxyClient(String serverId, String address, int port) {
+	public ProxyClient(String serverId, String address, int port, String type) {
 		this.serverId = serverId;
 		this.address = address;
 		this.port = port;
+		if(type.equals("bedrock")) {
+			serverType = ConnectType.BEDROCK;
+		}
+	}
+	
+	public ConnectType getServerType() {
+		return this.serverType;
 	}
 	
 	public void addPlayer(Player player) {
@@ -45,15 +54,15 @@ public class ProxyClient {
 	}
 	
 	public String getAddress() {
-		return address;
+		return this.address;
 	}
 	
 	public String getServerId() {
-		return serverId;
+		return this.serverId;
 	}
 	
 	public int getPort() {
-		return port;
+		return this.port;
 	}
 	
 }

@@ -191,6 +191,7 @@ public class Server {
 			}
 			getSessionManager().getVerifiedChannels().add(channel);
 			this.logger.info(Color.GREEN + "Client " + pk.serverId + " [" + pk.address + ":" + pk.port + "] connected");
+			//ProxyClient client = 
 			getSessionManager().sendPacket(pk,channel);
 			
 		} if(getSessionManager().getVerifiedChannels().contains(channel)) {
@@ -203,13 +204,30 @@ public class Server {
 	}
 	
 	public void refreshClients() {
-		
+		this.clients = new HashMap<>();
+		this.players = new HashMap<>();
+		ConfigSection section = this.clientConfig.getSection("servers");
+		for(Map.Entry map : section.getAll().entrySet()) {
+			String serverId = (String) map.getKey();
+			ConfigSection info = (ConfigSection) map.getValue();
+			String address = info.getString("address");
+			int port = info.getInt("port");
+			String type = info.getString("type");
+			registerNewClient(serverId,port,address,type);
+		}
 	}
 	
 	public ProxyClient registerNewClient(String serverId, int port, String address) {
-		ProxyClient client = new ProxyClient(serverId, address, port);
-		clients.put(serverId.toLowerCase(),client);
-		return client;
+		return registerNewClient(serverId, port, address, "java");
+	}
+	
+	public ProxyClient registerNewClient(String serverId, int port, String address, String type) {
+		if(type.equals("java") || type.equals("bedrock")) {
+			ProxyClient client = new ProxyClient(serverId, address, port,type);
+			clients.put(serverId.toLowerCase(),client);
+			return client;
+		}
+		return null;
 	}
 	
 	public Map<String,Player> getOnlinePlayers(){
