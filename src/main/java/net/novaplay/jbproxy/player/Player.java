@@ -7,6 +7,7 @@ import net.novaplay.jbproxy.command.CommandSender;
 import net.novaplay.jbproxy.event.packet.PacketReceiveEvent;
 import net.novaplay.jbproxy.server.Server;
 import net.novaplay.library.netty.packet.Packet;
+import net.novaplay.networking.player.ChatPacket;
 
 public class Player implements CommandSender{
 
@@ -34,7 +35,13 @@ public class Player implements CommandSender{
 		return currentServer != null ? currentServer : null; // wery crap code, but what i can do? 
 	}
 	
-	public void sendMessage(String message) {}
+	public void sendMessage(String message) {
+		ChatPacket pk = new ChatPacket();
+		pk.player = this.name.toLowerCase();
+		pk.type = "chat";
+		pk.message = message;
+		getServer().getSessionManager().sendPacket(pk, getCurrentClient().getServerChannel());
+	}
 	
 	public void sendTitle(String title) {}
 	public void sendTitle(String title, String subtitle) {}

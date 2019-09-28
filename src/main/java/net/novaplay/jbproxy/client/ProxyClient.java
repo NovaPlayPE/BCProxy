@@ -2,6 +2,7 @@ package net.novaplay.jbproxy.client;
 
 import java.util.*;
 
+import io.netty.channel.Channel;
 import lombok.Getter;
 import lombok.Setter;
 import net.novaplay.jbproxy.player.Player;
@@ -16,6 +17,9 @@ public class ProxyClient {
 	private String address;
 	private int port;
 	private ConnectType serverType = ConnectType.JAVA;
+	@Getter
+	@Setter
+	public Channel serverChannel = null;
 	@Getter
 	@Setter
 	public boolean isOnline = false;

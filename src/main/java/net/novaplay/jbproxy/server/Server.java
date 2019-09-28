@@ -190,6 +190,7 @@ public class Server {
 				client.setOnline(true);
 			}
 			getSessionManager().getVerifiedChannels().add(channel);
+			client.setServerChannel(channel);
 			this.logger.info(Color.GREEN + "Client " + pk.serverId + " [" + pk.address + ":" + pk.port + "] connected");
 			//ProxyClient client = 
 			getSessionManager().sendPacket(pk,channel);

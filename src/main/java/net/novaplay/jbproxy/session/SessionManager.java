@@ -62,6 +62,7 @@ public class SessionManager {
 					ProxyClient client = server.getClientByName(nettyHandler.getClientnameByChannel(context.channel()));
 					try {
 						client.setOnline(false);
+						client.setServerChannel(null);
 						server.getLogger().info("Server " + client.getServerId() +" disconnected");
 					} catch(NullPointerException e) {
 						server.getLogger().logException(e);
