@@ -17,10 +17,6 @@ import io.netty.channel.Channel;
 import lombok.Getter;
 import lombok.Setter;
 import net.novaplay.jbproxy.client.ProxyClient;
-import net.novaplay.jbproxy.command.Command;
-import net.novaplay.jbproxy.command.CommandArgument;
-import net.novaplay.jbproxy.command.CommandExecution;
-import net.novaplay.jbproxy.command.CommandLine;
 import net.novaplay.jbproxy.command.CommandSender;
 import net.novaplay.jbproxy.config.Config;
 import net.novaplay.jbproxy.config.ConfigSection;
@@ -248,35 +244,6 @@ public class Server {
 	public Map<String,ProxyClient> getClients(){
 		return clients;
 	}
-	
-	
-	/**
-	 *This is an example. In future it will be changed, because I still fighting with command api...
-	 */
-	
-	/*
-	public void createCommands() {
-		Command command = new Command("pl");
-		
-		Command help = new Command("help",true);
-		CommandLine line1 = (CommandLine) help.createNewCommandLine();
-		CommandArgument arg = new CommandArgument("1");
-		line1.registerNewArguments(arg);
-		CommandLine line2 = (CommandLine) help.createNewCommandLine();
-		CommandArgument arg2 = new CommandArgument("2");
-		line2.registerNewArguments(arg);
-		help.setExecution(new CommandExecution() {
-			public boolean execute(CommandSender sender, CommandLine line) {
-				if(sender instanceof Player) {
-					Player player = (Player) sender;
-					
-				}
-				return false;
-			}
-		});
-	}
-	
-	*/
 	
 	public ProxyClient getOnlineClientByName(String name) {
 		if(getOnlineClients().containsKey(name.toLowerCase())) {
