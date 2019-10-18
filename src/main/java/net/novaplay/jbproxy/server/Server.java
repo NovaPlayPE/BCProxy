@@ -20,6 +20,7 @@ import net.novaplay.jbproxy.client.ProxyClient;
 import net.novaplay.jbproxy.command.CommandSender;
 import net.novaplay.jbproxy.config.Config;
 import net.novaplay.jbproxy.config.ConfigSection;
+import net.novaplay.jbproxy.event.HandlerList;
 import net.novaplay.jbproxy.player.Player;
 import net.novaplay.jbproxy.plugin.Plugin;
 import net.novaplay.jbproxy.plugin.PluginManager;
@@ -49,8 +50,12 @@ public class Server {
     private SessionManager sessionManager = null;
     private PluginManager pluginManager = null;
     
+    private boolean isRunning = true;
+    private boolean isStopped = false;
     private Config properties;
     private Config clientConfig;
+    private int tickCounter = 0;
+    private long nextTick = 0;
     
 	private Map<String,Player> players = new HashMap<String,Player>();
 	private Map<String, ProxyClient> clients = new HashMap<String,ProxyClient>();
@@ -129,6 +134,56 @@ public class Server {
         this.logger.info(Color.GREEN + "Creating netty server");
         sessionManager = new SessionManager(this, getPort());
         sessionManager.start();
+        
+        start();
+	}
+	
+	public void start() {
+		getLogger().info("Server has been started!");
+		this.nextTick = System.currentTimeMillis();
+		while(this.isRunning) {
+			try {
+				++this.tickCounter;
+				this.scheduler.mainThreadHeartbeat(this.tickCounter);
+			} catch(RuntimeException e) {
+				getLogger().logException(e);
+			}
+			try {
+				Thread.sleep(1);
+			} catch(InterruptedException ex) {
+				getLogger().logException(ex);
+			}
+		}
+		forceShutdown();
+	}
+	
+	public void shutdown() {
+		if(this.isRunning) {
+			ServerKiller kill = new ServerKiller(90);
+			kill.start();
+		}
+		this.isRunning = false;
+	}
+	
+	public void forceShutdown() {
+		if(this.isStopped) { return; }
+		try {
+			this.isStopped = true;
+			shutdown();
+			
+			getLogger().info("Disabling all plugins");
+			getPluginManager().disablePlugins();
+			
+			getLogger().info("Disabling event handlers");
+			HandlerList.unregisterAll();
+			
+			getLogger().info("Stopping all tasks");
+			this.scheduler.cancelAllTasks();
+			this.scheduler.mainThreadHeartbeat(Integer.MAX_VALUE);
+		} catch(Exception e) {
+			getLogger().logException(e);
+			System.exit(1);
+		}
 	}
 	
 	public PluginManager getPluginManager() {

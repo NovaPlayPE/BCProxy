@@ -39,6 +39,7 @@ public class SessionManager {
 				
 			}
 		});
+		this.server.getLogger().info("Starting server on port " + String.valueOf(this.server.getPort()));
 		packetHandler = new PacketHandler() {
 			@Override
 			public void receivePacket(Packet packet, Channel channel) {
@@ -50,6 +51,7 @@ public class SessionManager {
 				
 			}
 		};
+		this.server.getLogger().info("Loaded packet handler");
 		connectionListener = new ConnectionListener() {
 			@Override
 			public void channelConnected(ChannelHandlerContext context) {
@@ -72,7 +74,7 @@ public class SessionManager {
 			}
 			
 		};
-		
+		this.server.getLogger().info("Loaded connection listener");
 		
 		
 		
