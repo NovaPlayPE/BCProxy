@@ -7,6 +7,8 @@ import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -17,7 +19,10 @@ import io.netty.channel.Channel;
 import lombok.Getter;
 import lombok.Setter;
 import net.novaplay.jbproxy.client.ProxyClient;
+import net.novaplay.jbproxy.command.CommandMap;
+import net.novaplay.jbproxy.command.CommandReader;
 import net.novaplay.jbproxy.command.CommandSender;
+import net.novaplay.jbproxy.command.ConsoleCommandSender;
 import net.novaplay.jbproxy.config.Config;
 import net.novaplay.jbproxy.config.ConfigSection;
 import net.novaplay.jbproxy.event.HandlerList;
@@ -37,7 +42,6 @@ import net.novaplay.library.netty.packet.Packet;
 public class Server {
 
 	private static Server instance = null;
-	@Getter
 	public Logger logger = null;
     @Getter
 	public String filePath;
@@ -56,6 +60,10 @@ public class Server {
     private Config clientConfig;
     private int tickCounter = 0;
     private long nextTick = 0;
+    private ConsoleCommandSender commandSender = new ConsoleCommandSender();
+    private CommandMap commandMap = null;
+    private ExecutorService pool = Executors.newCachedThreadPool();
+    private ExecutorService synchronizedPool = Executors.newSingleThreadExecutor();
     
 	private Map<String,Player> players = new HashMap<String,Player>();
 	private Map<String, ProxyClient> clients = new HashMap<String,ProxyClient>();
@@ -68,27 +76,23 @@ public class Server {
 		return "1.0";
 	}
 	
-    @Getter
-    @Setter
-    private int playersPerThread;
-
-    private final ThreadPoolExecutor playerTicker = new ThreadPoolExecutor(1, Runtime.getRuntime().availableProcessors(),
-            1, TimeUnit.MINUTES, new LinkedBlockingQueue<>(), new ThreadFactoryBuilder().setNameFormat("Player Ticker - #%d").setDaemon(true).build());
-
-	
     public static Server getInstance() {
     	return instance;
     }
     
-	public Server(Logger logger, String filePath, String dataPath, String pluginPath) {
+	public Server(String filePath, String dataPath, String pluginPath) {
 		instance = this;
-		this.logger = logger;
+		this.logger = new Logger(dataPath + "server.log");
 		this.filePath = filePath;
         if (!new File(pluginPath).exists()) {
             new File(pluginPath).mkdirs();
         }
         this.dataPath = new File(dataPath).getAbsolutePath() + "/";
         this.pluginPath = new File(pluginPath).getAbsolutePath() + "/";
+        
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {}));
+        Thread.currentThread().setName("JBProxy");
+        
         this.logger.info(Color.GREEN + "Loading " + Color.WHITE + "server.properties");
         this.properties = new Config(this.dataPath + "server.properties", Config.PROPERTIES, new ConfigSection() {
             {
@@ -96,12 +100,6 @@ public class Server {
                 put("proxy-port", 9855);
                 put("password", "ExamplePassword123");
                 put("async-workers", "auto");
-                put("enable-profiling", false);
-                put("profile-report-trigger", 20);
-                put("max-players", 100);
-                //put("rcon.password", Base64.getEncoder().encodeToString(UUID.randomUUID().toString().replace("-", "").getBytes()).substring(3, 13));
-                put("debug", 1);
-                put("display-stats-in-title", true);
             }
         });
         this.clientConfig = new Config(this.dataPath + "clients.yml", Config.YAML, new ConfigSection() {
@@ -113,6 +111,13 @@ public class Server {
             	put("server.Server2.port", 25565);
             	put("server.Server2.type", "java");
         	}
+        });
+        
+        this.commandSender = new ConsoleCommandSender();
+        this.commandMap = new CommandMap(this);
+        this.pool.execute(() -> {
+        	Thread.currentThread().setName("JBProxy-Commands");
+        	this.getCommandMap().dispatch(this.commandSender, command -> getLogger().error("Command " + command + " not found"));
         });
         Object poolSize = this.getConfig("async-workers", "auto");
         if (!(poolSize instanceof Integer)) {
@@ -135,6 +140,22 @@ public class Server {
         sessionManager = new SessionManager(this, getPort());
         sessionManager.start();
         
+        this.properties.save(true);
+        
+        Runtime.getRuntime().addShutdownHook(new Thread(() ->  {
+        	this.isStopped = true;
+			shutdown();
+			
+			getLogger().info("Disabling all plugins");
+			getPluginManager().disablePlugins();
+			
+			getLogger().info("Disabling event handlers");
+			HandlerList.unregisterAll();
+			
+			getLogger().info("Stopping all tasks");
+			this.scheduler.cancelAllTasks();
+			this.scheduler.mainThreadHeartbeat(Integer.MAX_VALUE);
+        }));
         start();
 	}
 	
@@ -148,42 +169,18 @@ public class Server {
 			} catch(RuntimeException e) {
 				getLogger().logException(e);
 			}
-			try {
-				Thread.sleep(1);
-			} catch(InterruptedException ex) {
-				getLogger().logException(ex);
-			}
 		}
-		forceShutdown();
 	}
 	
 	public void shutdown() {
-		if(this.isRunning) {
-			ServerKiller kill = new ServerKiller(90);
-			kill.start();
-		}
+		this.synchronizedPool.shutdown();
+		this.pool.shutdown();
 		this.isRunning = false;
+		System.exit(0);
 	}
 	
-	public void forceShutdown() {
-		if(this.isStopped) { return; }
-		try {
-			this.isStopped = true;
-			shutdown();
-			
-			getLogger().info("Disabling all plugins");
-			getPluginManager().disablePlugins();
-			
-			getLogger().info("Disabling event handlers");
-			HandlerList.unregisterAll();
-			
-			getLogger().info("Stopping all tasks");
-			this.scheduler.cancelAllTasks();
-			this.scheduler.mainThreadHeartbeat(Integer.MAX_VALUE);
-		} catch(Exception e) {
-			getLogger().logException(e);
-			System.exit(1);
-		}
+	public Logger getLogger() {
+		return Logger.getLogger();
 	}
 	
 	public PluginManager getPluginManager() {
@@ -196,6 +193,10 @@ public class Server {
 				getPluginManager().enablePlugin(plugin);
 			}
 		}
+	}
+	
+	public CommandMap getCommandMap() {
+		return this.commandMap;
 	}
 	
 	public SessionManager getSessionManager() {

@@ -28,7 +28,7 @@
       	<dependency>
       		<groupId>com.github.novaplaype</groupId>
       		<artifactId>NovaLib</artifactId>
-      		<version>fec99dd9eb2273f681eae37f60a8382506adbc01</version>
+      		<version>5ff1eaee0d828346420f54a22a8949b10efe8ca3</version>
       	</dependency>
         <dependency>
             <groupId>org.fusesource.jansi</groupId>
@@ -89,6 +89,21 @@
             <artifactId>fastutil-bytebase</artifactId>
             <version>3.0-SNAPSHOT</version>
             <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>1.7.5</version>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-log4j12</artifactId>
+            <version>1.7.5</version>
+            </dependency>
+        <dependency>
+        <groupId>org.slf4j</groupId>
+        <artifactId>jcl-over-slf4j</artifactId>
+        <version>1.7.5</version>
         </dependency>
     </dependencies>
   

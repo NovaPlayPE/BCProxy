@@ -3,6 +3,7 @@ package net.novaplay.jbproxy.session;
 import net.novaplay.library.callback.Callback;
 import net.novaplay.jbproxy.client.ProxyClient;
 import net.novaplay.jbproxy.server.Server;
+import net.novaplay.jbproxy.utils.Color;
 import net.novaplay.jbproxy.utils.Utils;
 import net.novaplay.library.netty.ConnectionListener;
 import net.novaplay.library.netty.NettyHandler;
@@ -39,7 +40,7 @@ public class SessionManager {
 				
 			}
 		});
-		this.server.getLogger().info("Starting server on port " + String.valueOf(this.server.getPort()));
+		this.server.getLogger().info(Color.GREEN + "Starting server on port " + Color.BLUE + String.valueOf(this.server.getPort()));
 		packetHandler = new PacketHandler() {
 			@Override
 			public void receivePacket(Packet packet, Channel channel) {
@@ -51,7 +52,7 @@ public class SessionManager {
 				
 			}
 		};
-		this.server.getLogger().info("Loaded packet handler");
+		this.server.getLogger().info(Color.GREEN + "Loaded packet handler");
 		connectionListener = new ConnectionListener() {
 			@Override
 			public void channelConnected(ChannelHandlerContext context) {
@@ -74,7 +75,7 @@ public class SessionManager {
 			}
 			
 		};
-		this.server.getLogger().info("Loaded connection listener");
+		this.server.getLogger().info(Color.GREEN + "Loaded connection listener");
 		
 		
 		

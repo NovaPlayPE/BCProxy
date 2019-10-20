@@ -5,6 +5,7 @@ import java.io.IOException;
 import jline.console.ConsoleReader;
 import jline.console.CursorBuffer;
 import net.novaplay.jbproxy.InterruptibleThread;
+import net.novaplay.jbproxy.event.server.CommandEvent;
 import net.novaplay.jbproxy.server.Server;
 import net.novaplay.jbproxy.utils.Utils;
 
@@ -13,6 +14,8 @@ public class CommandReader extends Thread implements InterruptibleThread{
 	public static CommandReader instance;
 	private ConsoleReader reader;
 	private CursorBuffer stashed;
+	
+	private boolean running = true;
 	
 	 public CommandReader() {
 		 if (instance != null) {
@@ -59,6 +62,37 @@ public class CommandReader extends Thread implements InterruptibleThread{
 	            // ignore
 	        }
 	    }
+	 
+	 @Override
+	 public void run() {
+		 long lastLine = System.currentTimeMillis();
+		 while(this.running) {
+			 if(Server.getInstance().getPluginManager() == null) { continue; }
+			 String line = readLine();
+			 if(line != null && !line.trim().equals("")) {
+				 try {
+					 CommandEvent e = new CommandEvent(line);
+					 Server.getInstance().getPluginManager().callEvent(e);
+					 if(!e.isCancelled()) {
+						 
+					 }
+				 } catch(Exception e){
+					 Server.getInstance().getLogger().logException(e);
+				 }
+			 } else if(System.currentTimeMillis() - lastLine <= 1) {
+				 try {
+					 sleep(40);
+				 } catch(InterruptedException e) {
+					 Server.getInstance().getLogger().logException(e);
+				 }
+			 }
+			 lastLine = System.currentTimeMillis();
+		 }
+	 }
+	 
+	 public void shutdown() {
+		 this.running  = false;
+	 }
 
 	 public void removePromptLine() {
 	       try {

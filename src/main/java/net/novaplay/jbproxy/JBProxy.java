@@ -31,17 +31,14 @@ public class JBProxy {
             }
         }
 
-        Logger logger = new Logger(DATA_PATH + "server.log");
-
         try {
             if (ANSI) {
                 System.out.print((char) 0x1b + "]0;Starting JBProxy for network listening" + (char) 0x07);
             }
-            Server server = new Server(logger, PATH, DATA_PATH, PLUGIN_PATH);
+            Server server = new Server(PATH, DATA_PATH, PLUGIN_PATH);
         } catch (Exception e) {
-            logger.logException(e);
         }
-
+/*
         if (ANSI) {
             System.out.print((char) 0x1b + "]0;Stopping Proxy..." + (char) 0x07);
         }
@@ -64,7 +61,7 @@ public class JBProxy {
         if (ANSI) {
             System.out.print((char) 0x1b + "]0;Server Stopped" + (char) 0x07);
         }
-        System.exit(0);
+        System.exit(0);*/
     }
 
 }
