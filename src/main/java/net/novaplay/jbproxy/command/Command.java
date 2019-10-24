@@ -5,8 +5,9 @@ import java.util.ArrayList;
 public abstract class Command {
 	
 	private String name = "";
-	private ArrayList<String> aliases = new ArrayList<String>();
-	private String usage = "";
+	protected ArrayList<String> aliases = new ArrayList<String>();
+	protected String usage = "";
+	protected String description = "";
 	
 	public Command(String name) {
 		this(name, "");
@@ -28,6 +29,10 @@ public abstract class Command {
 	
 	public ArrayList<String> getAliases(){
 		return this.aliases;
+	}
+	
+	public String getDescription() {
+		return this.description;
 	}
 	
 	public String getUsage() {

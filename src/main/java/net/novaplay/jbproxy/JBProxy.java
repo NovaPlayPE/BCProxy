@@ -38,30 +38,6 @@ public class JBProxy {
             Server server = new Server(PATH, DATA_PATH, PLUGIN_PATH);
         } catch (Exception e) {
         }
-/*
-        if (ANSI) {
-            System.out.print((char) 0x1b + "]0;Stopping Proxy..." + (char) 0x07);
-        }
-        logger.info("Stopping other threads");
-
-        for (Thread thread : java.lang.Thread.getAllStackTraces().keySet()) {
-            if (!(thread instanceof InterruptibleThread)) {
-                continue;
-            }
-            logger.debug("Stopping " + thread.getClass().getSimpleName() + " thread");
-            if (thread.isAlive()) {
-                thread.interrupt();
-            }
-        }
-
-        ServerKiller killer = new ServerKiller(8);
-        killer.start();
-        //sCommandReader.getInstance().removePromptLine();
-
-        if (ANSI) {
-            System.out.print((char) 0x1b + "]0;Server Stopped" + (char) 0x07);
-        }
-        System.exit(0);*/
     }
 
 }

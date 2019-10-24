@@ -43,6 +43,10 @@ public class CommandMap {
 		}
 	}
 	
+	public List<Command> getCommands(){
+		return this.registeredCommands;
+	}
+	
 	public String executeCommand(CommandSender sender, String commandLine) {
 		String[] line = commandLine.split(" ");
 		String label = line[0];

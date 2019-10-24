@@ -23,6 +23,8 @@ import net.novaplay.jbproxy.command.CommandMap;
 import net.novaplay.jbproxy.command.CommandReader;
 import net.novaplay.jbproxy.command.CommandSender;
 import net.novaplay.jbproxy.command.ConsoleCommandSender;
+import net.novaplay.jbproxy.command.defaults.HelpCommand;
+import net.novaplay.jbproxy.command.defaults.StopCommand;
 import net.novaplay.jbproxy.config.Config;
 import net.novaplay.jbproxy.config.ConfigSection;
 import net.novaplay.jbproxy.event.HandlerList;
@@ -144,7 +146,6 @@ public class Server {
         
         Runtime.getRuntime().addShutdownHook(new Thread(() ->  {
         	this.isStopped = true;
-			shutdown();
 			
 			getLogger().info("Disabling all plugins");
 			getPluginManager().disablePlugins();
@@ -156,11 +157,17 @@ public class Server {
 			this.scheduler.cancelAllTasks();
 			this.scheduler.mainThreadHeartbeat(Integer.MAX_VALUE);
         }));
+        registerCommands();
         start();
 	}
 	
+	private void registerCommands() {
+		this.getCommandMap().registerCommand(new HelpCommand("help"));
+		this.getCommandMap().registerCommand(new StopCommand("stop"));
+	}
+	
 	public void start() {
-		getLogger().info("Server has been started!");
+		getLogger().info(Color.GREEN + "Server has been started!, Type help for help (?)");
 		this.nextTick = System.currentTimeMillis();
 		while(this.isRunning) {
 			try {
