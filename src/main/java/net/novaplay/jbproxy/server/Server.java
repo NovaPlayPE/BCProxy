@@ -24,6 +24,7 @@ import net.novaplay.jbproxy.command.CommandReader;
 import net.novaplay.jbproxy.command.CommandSender;
 import net.novaplay.jbproxy.command.ConsoleCommandSender;
 import net.novaplay.jbproxy.command.defaults.HelpCommand;
+import net.novaplay.jbproxy.command.defaults.PluginsCommand;
 import net.novaplay.jbproxy.command.defaults.StopCommand;
 import net.novaplay.jbproxy.config.Config;
 import net.novaplay.jbproxy.config.ConfigSection;
@@ -164,6 +165,7 @@ public class Server {
 	private void registerCommands() {
 		this.getCommandMap().registerCommand(new HelpCommand("help"));
 		this.getCommandMap().registerCommand(new StopCommand("stop"));
+		this.getCommandMap().registerCommand(new PluginsCommand("plugins"));
 	}
 	
 	public void start() {

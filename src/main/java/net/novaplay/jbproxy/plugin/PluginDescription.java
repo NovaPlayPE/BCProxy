@@ -49,7 +49,7 @@ public class PluginDescription {
             this.api = list;
         }
         if (this.main.startsWith("net.novaplay.jbproxy.")) {
-            throw new PluginException("Invalid PluginDescription main, cannot start within the org.itxtech.nemisys. package");
+            throw new PluginException("Invalid PluginDescription main, cannot start within the net.novaplay.jbproxy. package");
         }
 
         if (plugin.containsKey("code_signing")) {

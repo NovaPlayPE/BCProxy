@@ -45,7 +45,14 @@ public class JavaPlugin implements Plugin {
 	}
 	
 	public void setEnabled(boolean value) {
-		this.enabled = value;
+		if(this.enabled != value) {
+			this.enabled = value;
+			if(this.enabled) {
+				onEnable();
+			} else {
+				onDisable();
+			}
+		}
 	}
 
 	@Override
