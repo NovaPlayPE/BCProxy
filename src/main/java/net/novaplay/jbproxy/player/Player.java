@@ -14,7 +14,9 @@ public class Player implements CommandSender{
 	private String name;
 	private UUID uuid;
 	private Server server;
-	private ProxyClient currentServer;
+	private ProxyClient currentServer = null;
+	private boolean isFirstServer = true;
+	private boolean serverBefore = false;
 	private boolean isOp = false;
 	
 	public Player(String playerName, UUID uuid, Server server) {

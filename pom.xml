@@ -28,7 +28,7 @@
       	<dependency>
       		<groupId>com.github.novaplaype</groupId>
       		<artifactId>NovaLib</artifactId>
-      		<version>5ff1eaee0d828346420f54a22a8949b10efe8ca3</version>
+      		<version>f3658a77918417d92534f520ddd79de3e2dcee7d</version>
       	</dependency>
         <dependency>
             <groupId>org.fusesource.jansi</groupId>

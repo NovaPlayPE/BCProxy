@@ -23,6 +23,7 @@ import net.novaplay.jbproxy.command.CommandMap;
 import net.novaplay.jbproxy.command.CommandReader;
 import net.novaplay.jbproxy.command.CommandSender;
 import net.novaplay.jbproxy.command.ConsoleCommandSender;
+import net.novaplay.jbproxy.command.defaults.ClientsCommand;
 import net.novaplay.jbproxy.command.defaults.HelpCommand;
 import net.novaplay.jbproxy.command.defaults.PluginsCommand;
 import net.novaplay.jbproxy.command.defaults.StopCommand;
@@ -56,6 +57,7 @@ public class Server {
     public ServerScheduler scheduler = null;
     private SessionManager sessionManager = null;
     private PluginManager pluginManager = null;
+    private String password = null;
     
     private boolean isRunning = true;
     private boolean isStopped = false;
@@ -105,16 +107,19 @@ public class Server {
                 put("async-workers", "auto");
             }
         });
-        this.clientConfig = new Config(this.dataPath + "clients.yml", Config.YAML, new ConfigSection() {
-        	{
-        		put("server.Server1.address", "0.0.0.0");
-        		put("server.Server1.port", 19132);
-        		put("server.Server1.type", "bedrock");
-        		put("server.Server2.address", "0.0.0.0");
-            	put("server.Server2.port", 25565);
-            	put("server.Server2.type", "java");
-        	}
-        });
+        File file = new File(this.dataPath + "clients.yml");
+		if (!file.exists()) {
+			this.clientConfig = new Config(this.dataPath + "clients.yml", Config.YAML);
+			clientConfig.set("servers.Server1.address", "0.0.0.0");
+			clientConfig.set("servers.Server1.port", 19132);
+			clientConfig.set("servers.Server1.type", "bedrock");
+			clientConfig.set("servers.Server2.address", "0.0.0.0");
+			clientConfig.set("servers.Server2.port", 25565);
+			clientConfig.set("servers.Server2.type", "java");
+			clientConfig.save();
+		} else {
+			this.clientConfig = new Config(this.dataPath + "clients.yml", Config.YAML);
+		}
         
         this.commandSender = new ConsoleCommandSender();
         this.commandMap = new CommandMap(this);
@@ -166,6 +171,7 @@ public class Server {
 		this.getCommandMap().registerCommand(new HelpCommand("help"));
 		this.getCommandMap().registerCommand(new StopCommand("stop"));
 		this.getCommandMap().registerCommand(new PluginsCommand("plugins"));
+		this.getCommandMap().registerCommand(new ClientsCommand("clients"));
 	}
 	
 	public void start() {
@@ -212,6 +218,10 @@ public class Server {
 		return sessionManager;
 	}
 	
+	public String getPassword() {
+		return this.getPropertyString("proxy-password","ExamplePassword123");
+	}
+	
 	public int getPort() {
 		return this.getPropertyInt("proxy-port",9855);
 	}
@@ -227,14 +237,19 @@ public class Server {
 			}
 			ProxyClient client = getClientByName(pk.serverId);
 			if(client == null) {
+				this.logger.info(Color.RED + "Unknown client");
 				pk.success = false;
 				getSessionManager().sendPacket(pk,channel);
 				return;
 			}
+			InetAddress add1;
+			InetAddress add2;
 			try {
-				InetAddress add1 = InetAddress.getByName(pk.address);
-				InetAddress add2 = InetAddress.getByName(client.getAddress());
+				add1 = InetAddress.getByName(pk.address);
+				add2 = InetAddress.getByName(client.getAddress());
 				if(add1 != add2) {
+					this.logger.info(pk.address + ":" + client.getAddress());
+					this.logger.info(Color.RED + "Unallowed adress");
 					pk.success = false;
 					getSessionManager().sendPacket(pk,channel);
 					return;
@@ -243,8 +258,16 @@ public class Server {
 				return;
 			}
 			if(client.getPort() != pk.port) {
+				this.logger.info(pk.port + ":" + client.getPort());
+				this.logger.info(Color.RED + "Right address and id, but wrong port");
 				pk.success = false;
 				getSessionManager().sendPacket(pk,channel);
+				return;
+			}
+			if(!this.getPassword().equals(pk.password)) {
+				this.logger.info(Color.RED + "Wrong password");
+				pk.success = false;
+				getSessionManager().sendPacket(packet, channel);
 				return;
 			}
 			if(!client.isOnline()) {
@@ -286,7 +309,8 @@ public class Server {
 	public ProxyClient registerNewClient(String serverId, int port, String address, String type) {
 		if(type.equals("java") || type.equals("bedrock")) {
 			ProxyClient client = new ProxyClient(serverId, address, port,type);
-			clients.put(serverId.toLowerCase(),client);
+			clients.put(serverId,client);
+			getLogger().log("Registered new Client " + serverId);
 			return client;
 		}
 		return null;
@@ -294,6 +318,28 @@ public class Server {
 	
 	public Map<String,Player> getOnlinePlayers(){
 		return players;
+	}
+	
+	public Player getPlayerByName(String name) {
+		name = name.toLowerCase();
+		int delta = Integer.MAX_VALUE;
+		for(ProxyClient client : getOnlineClients().values()) {
+			for(Player pla : client.getOnlinePlayers().values()) {
+				if(pla.getName().toLowerCase().startsWith(name)) {
+					int curDelta = pla.getName().length() - name.length();
+					if(curDelta < delta) {
+						delta = curDelta;
+						return pla;
+					}
+				}
+			}
+		}
+		return null;
+	}
+	
+	public boolean isClientOnline(String name) {
+		ProxyClient client = getClientByName(name);
+		return client.isOnline();
 	}
 	
 	public Map<String,ProxyClient> getOnlineClients(){
@@ -311,15 +357,15 @@ public class Server {
 	}
 	
 	public ProxyClient getOnlineClientByName(String name) {
-		if(getOnlineClients().containsKey(name.toLowerCase())) {
-			return getOnlineClients().get(name.toLowerCase());
+		if(getOnlineClients().containsKey(name)) {
+			return getOnlineClients().get(name);
 		}
 		return null;
 	}
 	
 	public ProxyClient getClientByName(String name) {
-		if(clients.containsKey(name.toLowerCase())) {
-			return clients.get(name.toLowerCase());
+		if(clients.containsKey(name)) {
+			return clients.get(name);
 		}
 		return null;
 	}

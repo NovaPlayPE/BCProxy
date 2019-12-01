@@ -9,6 +9,7 @@ import net.novaplay.library.netty.ConnectionListener;
 import net.novaplay.library.netty.NettyHandler;
 import net.novaplay.library.netty.PacketHandler;
 import net.novaplay.library.netty.packet.Packet;
+import net.novaplay.networking.server.ProxyConnectPacket;
 
 import java.io.*;
 import java.util.*;
@@ -37,10 +38,9 @@ public class SessionManager {
 		nettyHandler.startServer(this.port, new Callback(){
 			@Override
 			public void accept(Object... args) {
-				
+				server.getLogger().info(Color.GREEN + "Server is running on port " + Color.BLUE + String.valueOf(server.getPort()));	
 			}
 		});
-		this.server.getLogger().info(Color.GREEN + "Starting server on port " + Color.BLUE + String.valueOf(this.server.getPort()));
 		packetHandler = new PacketHandler() {
 			@Override
 			public void receivePacket(Packet packet, Channel channel) {
@@ -49,7 +49,7 @@ public class SessionManager {
 			
 			@Override
 			public void registerPackets() {
-				
+				registerPacket(ProxyConnectPacket.class);
 			}
 		};
 		this.server.getLogger().info(Color.GREEN + "Loaded packet handler");
@@ -76,10 +76,6 @@ public class SessionManager {
 			
 		};
 		this.server.getLogger().info(Color.GREEN + "Loaded connection listener");
-		
-		
-		
-		
 		nettyHandler.registerPacketHandler(packetHandler);
 		nettyHandler.registerConnectionListener(connectionListener);
 		server.refreshClients();
