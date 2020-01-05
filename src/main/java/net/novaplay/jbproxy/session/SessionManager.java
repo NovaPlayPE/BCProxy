@@ -9,7 +9,11 @@ import net.novaplay.library.netty.ConnectionListener;
 import net.novaplay.library.netty.NettyHandler;
 import net.novaplay.library.netty.PacketHandler;
 import net.novaplay.library.netty.packet.Packet;
+import net.novaplay.networking.player.LoginPacket;
+import net.novaplay.networking.player.LogoutPacket;
 import net.novaplay.networking.server.ProxyConnectPacket;
+import net.novaplay.networking.server.ServerInfoPacket;
+import net.novaplay.networking.server.ServerListSyncPacket;
 
 import java.io.*;
 import java.util.*;
@@ -49,7 +53,12 @@ public class SessionManager {
 			
 			@Override
 			public void registerPackets() {
+				registerPacket(LoginPacket.class);
+				registerPacket(LogoutPacket.class);
+				
 				registerPacket(ProxyConnectPacket.class);
+				registerPacket(ServerListSyncPacket.class);
+				registerPacket(ServerInfoPacket.class);
 			}
 		};
 		this.server.getLogger().info(Color.GREEN + "Loaded packet handler");

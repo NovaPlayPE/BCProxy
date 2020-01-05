@@ -39,8 +39,10 @@ import net.novaplay.jbproxy.plugin.java.JavaPluginLoader;
 import net.novaplay.networking.IPlayerPacket;
 import net.novaplay.networking.IServerPacket;
 import net.novaplay.networking.player.LoginPacket;
+import net.novaplay.networking.player.LogoutPacket;
 import net.novaplay.networking.server.ProxyConnectPacket;
 import net.novaplay.networking.server.ServerInfoPacket;
+import net.novaplay.networking.server.ServerListSyncPacket;
 import net.novaplay.jbproxy.scheduler.ServerScheduler;
 import net.novaplay.jbproxy.session.SessionManager;
 import net.novaplay.jbproxy.utils.Color;
@@ -233,7 +235,9 @@ public class Server {
 	}
 
 	public void handleProxyPackets(Packet packet, Channel channel) {
+		this.logger.info("UnknownPacket");
 		if (packet instanceof ProxyConnectPacket) {
+			this.logger.info("ProxyConnectPacket");
 			if (getSessionManager().getVerifiedChannels().contains(channel)) {
 				return;
 			}
@@ -279,24 +283,20 @@ public class Server {
 			if (!client.isOnline()) {
 				client.setOnline(true);
 			}
+			pk.success = true;
 			getSessionManager().getVerifiedChannels().add(channel);
 			client.setServerChannel(channel);
 			this.logger.info(Color.GREEN + "Client " + pk.serverId + " [" + pk.address + ":" + pk.port + "] connected");
 			// ProxyClient client =
 			getSessionManager().sendPacket(pk, channel);
-
 		}
-		if (getSessionManager().getVerifiedChannels().contains(channel)) {
+		
+		if (!getSessionManager().getVerifiedChannels().contains(channel)) {
 			return;
 		}
-
-		if (packet instanceof IServerPacket) {
-			handleServerPackets(packet, channel);
-		}
-
-		if (packet instanceof IPlayerPacket) {
-			handlePlayerPackets(packet, channel);
-		}
+		
+		handleServerPackets(packet, channel);
+		handlePlayerPackets(packet, channel);
 	}
 
 	public void handleServerPackets(Packet packet, Channel channel) {
@@ -316,12 +316,44 @@ public class Server {
 			} catch (NullPointerException ex) {
 
 			}
+		} if(packet  instanceof ServerListSyncPacket) {
+			ServerListSyncPacket pk2 = (ServerListSyncPacket) packet;
+			ArrayList<String> servers = new ArrayList<String>();
+			for(String c : getOnlineClients().keySet()) {
+				servers.add(c);
+			}
+			pk2.serverList = servers;
+			getSessionManager().sendPacket(pk2,channel);
 		}
 	}
 
 	public void handlePlayerPackets(Packet packet, Channel channel) {
 		if (packet instanceof LoginPacket) {
+			
 			LoginPacket pk1 = (LoginPacket) packet;
+			String nick = pk1.username;
+			UUID uid = pk1.uuid;
+			String client = pk1.serverId;
+			this.logger.info("LoginPacket: Nick["+nick+"], UUID["+uid.toString()+", Server("+client+")");
+			
+			Player player = new Player(nick,uid,this);
+			players.put(nick,player);
+			ProxyClient server = getOnlineClientByName(client);
+			server.addPlayer(player);
+			this.logger.info("Player " + player.getName() + " connected");
+		} if(packet instanceof LogoutPacket) {
+			LogoutPacket pk2 = (LogoutPacket)packet;
+			String nick = pk2.username;
+			UUID uid = pk2.uuid;
+			String reason = pk2.reason;
+			this.logger.info("LogoutPacket: Nick["+nick+"], UUID["+uid.toString()+", Reason["+reason+"]");
+			
+			players.remove(nick);
+			this.logger.info("Player " + nick +" logged out: " + reason);
+			for(ProxyClient client : getOnlineClients().values()) {
+				client.removePlayer(nick);
+				this.logger.info("Player " + nick +" logged out: " + reason);
+			}
 		}
 	}
 
