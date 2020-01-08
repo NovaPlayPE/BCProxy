@@ -26,6 +26,7 @@ import net.novaplay.jbproxy.command.CommandSender;
 import net.novaplay.jbproxy.command.ConsoleCommandSender;
 import net.novaplay.jbproxy.command.defaults.ClientsCommand;
 import net.novaplay.jbproxy.command.defaults.HelpCommand;
+import net.novaplay.jbproxy.command.defaults.ListCommand;
 import net.novaplay.jbproxy.command.defaults.PluginsCommand;
 import net.novaplay.jbproxy.command.defaults.StopCommand;
 import net.novaplay.jbproxy.config.Config;
@@ -180,6 +181,7 @@ public class Server {
 		this.getCommandMap().registerCommand(new StopCommand("stop"));
 		this.getCommandMap().registerCommand(new PluginsCommand("plugins"));
 		this.getCommandMap().registerCommand(new ClientsCommand("clients"));
+		this.getCommandMap().registerCommand(new ListCommand("list"));
 	}
 
 	public void start() {
@@ -342,6 +344,7 @@ public class Server {
 			server.addPlayer(player);
 			this.logger.info("Player " + player.getName() + " connected");
 		} if(packet instanceof LogoutPacket) {
+			this.logger.info("LogoutPacket");
 			LogoutPacket pk2 = (LogoutPacket)packet;
 			String nick = pk2.username;
 			UUID uid = pk2.uuid;
