@@ -25,7 +25,7 @@ public class ListCommand extends Command {
 			}
 			sender.sendMessage("§6Players online ("+ Server.getInstance().getOnlinePlayers().size()+"): §a" +list);
 		} else {
-			if(!args[0].isEmpty()) {
+			if(args[0] != null) {
 				String server = args[0];
 				ProxyClient client = Server.getInstance().getOnlineClientByName(server);
 				if(client != null) {

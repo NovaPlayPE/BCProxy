@@ -2,6 +2,7 @@ package net.novaplay.jbproxy.session;
 
 import net.novaplay.library.callback.Callback;
 import net.novaplay.jbproxy.client.ProxyClient;
+import net.novaplay.jbproxy.player.Player;
 import net.novaplay.jbproxy.server.Server;
 import net.novaplay.jbproxy.utils.Color;
 import net.novaplay.jbproxy.utils.Utils;
@@ -75,6 +76,11 @@ public class SessionManager {
 					try {
 						client.setOnline(false);
 						client.setServerChannel(null);
+						HashMap<String, Player> map = new HashMap<String,Player>(client.getOnlinePlayers());
+						for(String s : map.keySet()) {
+							server.removePlayer(s);
+							client.removePlayer(s);
+						}
 						server.getLogger().info("Server " + client.getServerId() +" disconnected");
 					} catch(NullPointerException e) {
 						server.getLogger().logException(e);

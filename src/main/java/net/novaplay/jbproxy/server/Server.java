@@ -318,6 +318,7 @@ public class Server {
 			} catch (NullPointerException ex) {
 
 			}
+			return;
 		} if(packet  instanceof ServerListSyncPacket) {
 			ServerListSyncPacket pk2 = (ServerListSyncPacket) packet;
 			ArrayList<String> servers = new ArrayList<String>();
@@ -326,6 +327,7 @@ public class Server {
 			}
 			pk2.serverList = servers;
 			getSessionManager().sendPacket(pk2,channel);
+			return;
 		}
 	}
 
@@ -336,13 +338,13 @@ public class Server {
 			String nick = pk1.username;
 			UUID uid = pk1.uuid;
 			String client = pk1.serverId;
-			this.logger.info("LoginPacket: Nick["+nick+"], UUID["+uid.toString()+", Server("+client+")");
-			
 			Player player = new Player(nick,uid,this);
 			players.put(nick,player);
 			ProxyClient server = getOnlineClientByName(client);
 			server.addPlayer(player);
 			this.logger.info("Player " + player.getName() + " connected");
+			return;
+			
 		} if(packet instanceof LogoutPacket) {
 			this.logger.info("LogoutPacket");
 			LogoutPacket pk2 = (LogoutPacket)packet;
@@ -352,11 +354,10 @@ public class Server {
 			this.logger.info("LogoutPacket: Nick["+nick+"], UUID["+uid.toString()+", Reason["+reason+"]");
 			
 			players.remove(nick);
-			this.logger.info("Player " + nick +" logged out: " + reason);
 			for(ProxyClient client : getOnlineClients().values()) {
 				client.removePlayer(nick);
-				this.logger.info("Player " + nick +" logged out: " + reason);
 			}
+			return;
 		}
 	}
 
@@ -390,6 +391,18 @@ public class Server {
 
 	public Map<String, Player> getOnlinePlayers() {
 		return players;
+	}
+	
+	public void addPlayer(String identifier, Player p) {
+		if(!players.containsKey(identifier)) {
+			players.put(identifier,p);
+		}
+	}
+	
+	public void removePlayer(String identifier) {
+		if(players.containsKey(identifier)) {
+			players.remove(identifier);
+		}
 	}
 
 	public Player getPlayerByName(String name) {
