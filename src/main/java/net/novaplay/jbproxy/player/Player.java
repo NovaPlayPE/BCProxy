@@ -45,6 +45,10 @@ public class Player implements CommandSender{
 		getServer().getSessionManager().sendPacket(pk, getCurrentClient().getServerChannel());
 	}
 	
+	public void kick(String reason) {
+		
+	}
+	
 	public void sendTitle(String title) {}
 	public void sendTitle(String title, String subtitle) {}
 	

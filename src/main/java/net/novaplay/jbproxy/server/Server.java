@@ -19,6 +19,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import io.netty.channel.Channel;
 import lombok.Getter;
 import lombok.Setter;
+import net.novaplay.jbproxy.JBProxy;
 import net.novaplay.jbproxy.client.ProxyClient;
 import net.novaplay.jbproxy.command.CommandMap;
 import net.novaplay.jbproxy.command.CommandReader;
@@ -65,11 +66,13 @@ public class Server {
 	private SessionManager sessionManager = null;
 	private PluginManager pluginManager = null;
 	private String password = null;
+	private boolean onlyViaMain = false;
 
 	private boolean isRunning = true;
 	private boolean isStopped = false;
 	private Config properties;
 	private Config clientConfig;
+	private Config bans;
 	private int tickCounter = 0;
 	private long nextTick = 0;
 	private ConsoleCommandSender commandSender = new ConsoleCommandSender();
@@ -81,11 +84,11 @@ public class Server {
 	private Map<String, ProxyClient> clients = new HashMap<String, ProxyClient>();
 
 	public String getApiVersion() {
-		return "1.0.0";
+		return JBProxy.API_VERSION;
 	}
 
 	public String getVersion() {
-		return "1.0";
+		return JBProxy.VERSION;
 	}
 
 	public static Server getInstance() {
@@ -113,17 +116,21 @@ public class Server {
 				put("proxy-port", 9855);
 				put("password", "ExamplePassword123");
 				put("async-workers", "auto");
+				put("only-via-main",true);
 			}
 		});
+		this.bans = new Config(this.dataPath + "bans.json", Config.JSON);
 		File file = new File(this.dataPath + "clients.yml");
 		if (!file.exists()) {
 			this.clientConfig = new Config(this.dataPath + "clients.yml", Config.YAML);
 			clientConfig.set("servers.Server1.address", "0.0.0.0");
 			clientConfig.set("servers.Server1.port", 19132);
 			clientConfig.set("servers.Server1.type", "bedrock");
+			clientConfig.set("servers.Server1.isMain", true);
 			clientConfig.set("servers.Server2.address", "0.0.0.0");
 			clientConfig.set("servers.Server2.port", 25565);
 			clientConfig.set("servers.Server2.type", "java");
+			clientConfig.set("servers.Server2.isMain",true);
 			clientConfig.save();
 		} else {
 			this.clientConfig = new Config(this.dataPath + "clients.yml", Config.YAML);
@@ -228,6 +235,10 @@ public class Server {
 		return sessionManager;
 	}
 
+	public boolean onlyViaMain() {
+		return this.getPropertyBoolean("only-via-main",true);
+	}
+	
 	public String getPassword() {
 		return this.getPropertyString("proxy-password", "ExamplePassword123");
 	}
@@ -237,9 +248,7 @@ public class Server {
 	}
 
 	public void handleProxyPackets(Packet packet, Channel channel) {
-		this.logger.info("UnknownPacket");
 		if (packet instanceof ProxyConnectPacket) {
-			this.logger.info("ProxyConnectPacket");
 			if (getSessionManager().getVerifiedChannels().contains(channel)) {
 				return;
 			}
@@ -309,6 +318,7 @@ public class Server {
 				pk1.address = client.getAddress();
 				pk1.port = client.getPort();
 				pk1.type = client.getServerType();
+				pk1.isMain = client.isMain();
 				ArrayList<String> list = new ArrayList<String>();
 				for (String s : client.getOnlinePlayers().keySet()) {
 					list.add(s);
@@ -333,16 +343,19 @@ public class Server {
 
 	public void handlePlayerPackets(Packet packet, Channel channel) {
 		if (packet instanceof LoginPacket) {
-			
 			LoginPacket pk1 = (LoginPacket) packet;
 			String nick = pk1.username;
 			UUID uid = pk1.uuid;
 			String client = pk1.serverId;
 			Player player = new Player(nick,uid,this);
+			if(players.containsKey(nick)) {
+				player.kick("Already logged in");
+				return;
+			}
 			players.put(nick,player);
 			ProxyClient server = getOnlineClientByName(client);
 			server.addPlayer(player);
-			this.logger.info("Player " + player.getName() + " connected");
+			this.logger.info("§ePlayer §a" + player.getName() + " §econnected");
 			return;
 			
 		} if(packet instanceof LogoutPacket) {
@@ -351,11 +364,12 @@ public class Server {
 			String nick = pk2.username;
 			UUID uid = pk2.uuid;
 			String reason = pk2.reason;
-			this.logger.info("LogoutPacket: Nick["+nick+"], UUID["+uid.toString()+", Reason["+reason+"]");
-			
 			players.remove(nick);
 			for(ProxyClient client : getOnlineClients().values()) {
-				client.removePlayer(nick);
+				if(client.getOnlinePlayers().containsKey(nick)) {
+					client.removePlayer(nick);
+					this.logger.info("§cPlayer §a" + nick + " §cdisconnected from server §b"+client.getServerId());
+				}
 			}
 			return;
 		}
@@ -371,17 +385,18 @@ public class Server {
 			String address = info.getString("address");
 			int port = info.getInt("port");
 			String type = info.getString("type");
-			registerNewClient(serverId, port, address, type);
+			boolean main = info.getBoolean("isMain");
+			registerNewClient(serverId, port, address, type, main);
 		}
 	}
 
-	public ProxyClient registerNewClient(String serverId, int port, String address) {
-		return registerNewClient(serverId, port, address, "java");
+	public ProxyClient registerNewClient(String serverId, int port, String address, boolean main) {
+		return registerNewClient(serverId, port, address, "java",main);
 	}
 
-	public ProxyClient registerNewClient(String serverId, int port, String address, String type) {
+	public ProxyClient registerNewClient(String serverId, int port, String address, String type,boolean main) {
 		if (type.equals("java") || type.equals("bedrock")) {
-			ProxyClient client = new ProxyClient(serverId, address, port, type);
+			ProxyClient client = new ProxyClient(serverId, address, port, type,main);
 			clients.put(serverId, client);
 			getLogger().log("Registered new Client " + serverId);
 			return client;
@@ -420,6 +435,20 @@ public class Server {
 			}
 		}
 		return null;
+	}
+	
+	public void addBan(String name, String reason) {
+		if(!this.bans.exists(name)) {
+			this.bans.set(name, reason);
+			this.bans.save();
+		}
+	}
+	
+	public void unban(String name) {
+		if(this.bans.exists(name)) {
+			this.bans.remove(name);
+			this.bans.save();
+		}
 	}
 
 	public boolean isClientOnline(String name) {

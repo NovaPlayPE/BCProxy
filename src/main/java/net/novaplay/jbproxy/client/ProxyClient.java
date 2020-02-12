@@ -16,6 +16,7 @@ public class ProxyClient {
 	private String serverId;
 	private String address;
 	private int port;
+	private boolean isMain;
 	private ConnectType serverType = ConnectType.JAVA;
 	@Getter
 	@Setter
@@ -24,13 +25,14 @@ public class ProxyClient {
 	@Setter
 	public boolean isOnline = false;
 	
-	public ProxyClient(String serverId, String address, int port, String type) {
+	public ProxyClient(String serverId, String address, int port, String type, boolean isMain) {
 		this.serverId = serverId;
 		this.address = address;
 		this.port = port;
 		if(type.equals("bedrock")) {
 			serverType = ConnectType.BEDROCK;
 		}
+		this.isMain = isMain;
 	}
 	
 	public ConnectType getServerType() {
@@ -69,4 +71,7 @@ public class ProxyClient {
 		return this.port;
 	}
 	
+	public boolean isMain() {
+		return this.isMain;
+	}
 }
