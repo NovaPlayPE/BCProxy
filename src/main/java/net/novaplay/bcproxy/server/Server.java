@@ -21,8 +21,12 @@ import lombok.Getter;
 import lombok.Setter;
 import net.novaplay.networking.IPlayerPacket;
 import net.novaplay.networking.IServerPacket;
+import net.novaplay.networking.player.ChatPacket;
+import net.novaplay.networking.player.KickPacket;
 import net.novaplay.networking.player.LoginPacket;
 import net.novaplay.networking.player.LogoutPacket;
+import net.novaplay.networking.player.TransferPacket;
+import net.novaplay.networking.server.PlayerInfoPacket;
 import net.novaplay.networking.server.ProxyConnectPacket;
 import net.novaplay.networking.server.ServerInfoPacket;
 import net.novaplay.networking.server.ServerListSyncPacket;
@@ -40,6 +44,9 @@ import net.novaplay.bcproxy.command.defaults.StopCommand;
 import net.novaplay.bcproxy.config.Config;
 import net.novaplay.bcproxy.config.ConfigSection;
 import net.novaplay.bcproxy.event.HandlerList;
+import net.novaplay.bcproxy.event.packet.PacketReceiveEvent;
+import net.novaplay.bcproxy.event.player.PlayerLoginEvent;
+import net.novaplay.bcproxy.event.player.PlayerLogoutEvent;
 import net.novaplay.bcproxy.player.Player;
 import net.novaplay.bcproxy.plugin.Plugin;
 import net.novaplay.bcproxy.plugin.PluginManager;
@@ -66,13 +73,11 @@ public class Server {
 	private SessionManager sessionManager = null;
 	private PluginManager pluginManager = null;
 	private String password = null;
-	private boolean onlyViaMain = false;
 
 	private boolean isRunning = true;
 	private boolean isStopped = false;
 	private Config properties;
 	private Config clientConfig;
-	private Config bans;
 	private int tickCounter = 0;
 	private long nextTick = 0;
 	private ConsoleCommandSender commandSender = new ConsoleCommandSender();
@@ -119,18 +124,15 @@ public class Server {
 				put("only-via-main",true);
 			}
 		});
-		this.bans = new Config(this.dataPath + "bans.json", Config.JSON);
 		File file = new File(this.dataPath + "clients.yml");
 		if (!file.exists()) {
 			this.clientConfig = new Config(this.dataPath + "clients.yml", Config.YAML);
 			clientConfig.set("servers.Server1.address", "0.0.0.0");
 			clientConfig.set("servers.Server1.port", 19132);
-			clientConfig.set("servers.Server1.type", "bedrock");
 			clientConfig.set("servers.Server1.isMain", true);
 			clientConfig.set("servers.Server2.address", "0.0.0.0");
-			clientConfig.set("servers.Server2.port", 25565);
-			clientConfig.set("servers.Server2.type", "java");
-			clientConfig.set("servers.Server2.isMain",true);
+			clientConfig.set("servers.Server2.port", 19133);
+			clientConfig.set("servers.Server2.isMain",false);
 			clientConfig.save();
 		} else {
 			this.clientConfig = new Config(this.dataPath + "clients.yml", Config.YAML);
@@ -196,10 +198,20 @@ public class Server {
 		this.nextTick = System.currentTimeMillis();
 		while (this.isRunning) {
 			try {
+				long tick = System.currentTimeMillis();
+				if((tick - this.nextTick) < -5) {
+					return;
+				}
 				++this.tickCounter;
 				this.scheduler.mainThreadHeartbeat(this.tickCounter);
 			} catch (RuntimeException e) {
 				getLogger().logException(e);
+			}
+			
+			try {
+				Thread.sleep(1);
+			} catch(InterruptedException ex) {
+				getLogger().logException(ex);
 			}
 		}
 	}
@@ -305,9 +317,13 @@ public class Server {
 		if (!getSessionManager().getVerifiedChannels().contains(channel)) {
 			return;
 		}
-		
-		handleServerPackets(packet, channel);
-		handlePlayerPackets(packet, channel);
+		PacketReceiveEvent event = new PacketReceiveEvent(this,packet);
+		getPluginManager().callEvent(event);
+		if(packet instanceof IServerPacket) {
+			handleServerPackets(packet, channel);
+		} else if(packet instanceof IPlayerPacket) {
+			handlePlayerPackets(packet, channel);
+		}	
 	}
 
 	public void handleServerPackets(Packet packet, Channel channel) {
@@ -317,7 +333,6 @@ public class Server {
 				ProxyClient client = getOnlineClientByName(pk1.serverId);
 				pk1.address = client.getAddress();
 				pk1.port = client.getPort();
-				pk1.type = client.getServerType();
 				pk1.isMain = client.isMain();
 				ArrayList<String> list = new ArrayList<String>();
 				for (String s : client.getOnlinePlayers().keySet()) {
@@ -328,8 +343,8 @@ public class Server {
 			} catch (NullPointerException ex) {
 
 			}
-			return;
-		} if(packet  instanceof ServerListSyncPacket) {
+			
+		} else if(packet  instanceof ServerListSyncPacket) {
 			ServerListSyncPacket pk2 = (ServerListSyncPacket) packet;
 			ArrayList<String> servers = new ArrayList<String>();
 			for(String c : getOnlineClients().keySet()) {
@@ -337,7 +352,24 @@ public class Server {
 			}
 			pk2.serverList = servers;
 			getSessionManager().sendPacket(pk2,channel);
-			return;
+			
+		} else if(packet instanceof PlayerInfoPacket) {
+			getLogger().info("Gotcha info");
+			PlayerInfoPacket pk = (PlayerInfoPacket)packet;
+			Player p = getPlayer(pk.player);
+			if(p == null) {
+				getLogger().info("Null");
+				pk.online = false;
+				pk.handled = true;
+				getSessionManager().sendPacket(pk,channel);
+			}else {
+				getLogger().info("True");
+				pk.online = true;
+				pk.serverId = p.getCurrentClient().getServerId();
+				pk.uuid = p.getUUID();
+				pk.handled = true;
+				getSessionManager().sendPacket(pk,channel);
+			}
 		}
 	}
 
@@ -348,22 +380,37 @@ public class Server {
 			UUID uid = pk1.uuid;
 			String client = pk1.serverId;
 			Player player = new Player(nick,uid,this);
-			if(players.containsKey(nick)) {
-				player.kick("Already logged in");
-				return;
-			}
-			players.put(nick,player);
 			ProxyClient server = getOnlineClientByName(client);
-			server.addPlayer(player);
-			this.logger.info("§ePlayer §a" + player.getName() + " §econnected");
-			return;
-			
-		} if(packet instanceof LogoutPacket) {
-			this.logger.info("LogoutPacket");
+			PlayerLoginEvent event = new PlayerLoginEvent(player, server);
+			getPluginManager().callEvent(event);
+			if(!event.isCancelled()) {
+				Player oldPlayer = getPlayer(nick);
+				if(oldPlayer != null) {
+					if(oldPlayer.isTransfering) {
+						if(oldPlayer.transferDestination.getServerId().equals(server.getServerId())) {
+							ProxyClient oldServer = oldPlayer.getCurrentClient();
+							oldServer.removePlayer(oldPlayer.getName());
+							oldPlayer.setCurrentClient(server);
+							server.addPlayer(oldPlayer);
+							oldPlayer.isTransfering = false;
+							oldPlayer.transferDestination = null;
+							this.logger.info("§ePlayer §a" + player.getName() + " §etransfered from §b" + oldServer.getServerId() + " §eto §b"+server.getServerId());
+						}
+					} 
+				} else {
+					players.put(nick,player);
+					server.addPlayer(player);
+					this.logger.info("§ePlayer §a" + player.getName() + " §econnected");
+				}
+			}	
+		} else if(packet instanceof LogoutPacket) {
 			LogoutPacket pk2 = (LogoutPacket)packet;
 			String nick = pk2.username;
 			UUID uid = pk2.uuid;
 			String reason = pk2.reason;
+			Player player = getPlayer(nick);
+			PlayerLogoutEvent event = new PlayerLogoutEvent(player,reason);
+			getPluginManager().callEvent(event);
 			players.remove(nick);
 			for(ProxyClient client : getOnlineClients().values()) {
 				if(client.getOnlinePlayers().containsKey(nick)) {
@@ -371,7 +418,39 @@ public class Server {
 					this.logger.info("§cPlayer §a" + nick + " §cdisconnected from server §b"+client.getServerId());
 				}
 			}
-			return;
+		} else if(packet instanceof TransferPacket) {
+			TransferPacket pk3 = (TransferPacket)packet;
+			String nick = pk3.player;
+			String dest = pk3.destination;
+			Player p = getPlayerByName(nick);
+			if(isClientOnline(dest)) {
+				p.transfer(getOnlineClientByName(dest));
+				return;
+			}
+			p.sendMessage("§cFailed to transfer");
+		} else if(packet instanceof KickPacket) {
+			KickPacket pk4 = (KickPacket)packet;
+			Player player = getPlayerByName(pk4.player);
+			player.kick(pk4.reason);
+		} else if(packet instanceof ChatPacket) {
+			ChatPacket pk5 = (ChatPacket)packet;
+			//getLogger().info("Chat");
+			Player player = getPlayerByName(pk5.player);
+			String msg = pk5.message;
+			switch(pk5.type) {
+			case "chat":
+				player.sendMessage(msg);
+				break;
+			case "tip":
+				player.sendTip(msg);
+				break;
+			case "popup":
+				player.sendPopup(msg);
+				break;
+			case "title":
+				player.sendTitle(msg);
+				break;
+			}
 		}
 	}
 
@@ -384,28 +463,24 @@ public class Server {
 			ConfigSection info = (ConfigSection) map.getValue();
 			String address = info.getString("address");
 			int port = info.getInt("port");
-			String type = info.getString("type");
 			boolean main = info.getBoolean("isMain");
-			registerNewClient(serverId, port, address, type, main);
+			registerNewClient(serverId, port, address,main);
 		}
 	}
 
 	public ProxyClient registerNewClient(String serverId, int port, String address, boolean main) {
-		return registerNewClient(serverId, port, address, "java",main);
-	}
-
-	public ProxyClient registerNewClient(String serverId, int port, String address, String type,boolean main) {
-		if (type.equals("java") || type.equals("bedrock")) {
-			ProxyClient client = new ProxyClient(serverId, address, port, type,main);
-			clients.put(serverId, client);
-			getLogger().log("Registered new Client " + serverId);
-			return client;
-		}
-		return null;
+		ProxyClient client = new ProxyClient(serverId, address, port,main);
+		clients.put(serverId, client);
+		getLogger().log("Registered new Client " + serverId);
+		return client;
 	}
 
 	public Map<String, Player> getOnlinePlayers() {
 		return players;
+	}
+	
+	public Player getPlayer(String nick) {
+		return players.get(nick);
 	}
 	
 	public void addPlayer(String identifier, Player p) {
@@ -421,7 +496,6 @@ public class Server {
 	}
 
 	public Player getPlayerByName(String name) {
-		name = name.toLowerCase();
 		int delta = Integer.MAX_VALUE;
 		for (ProxyClient client : getOnlineClients().values()) {
 			for (Player pla : client.getOnlinePlayers().values()) {
@@ -437,20 +511,6 @@ public class Server {
 		return null;
 	}
 	
-	public void addBan(String name, String reason) {
-		if(!this.bans.exists(name)) {
-			this.bans.set(name, reason);
-			this.bans.save();
-		}
-	}
-	
-	public void unban(String name) {
-		if(this.bans.exists(name)) {
-			this.bans.remove(name);
-			this.bans.save();
-		}
-	}
-
 	public boolean isClientOnline(String name) {
 		ProxyClient client = getClientByName(name);
 		return client.isOnline();

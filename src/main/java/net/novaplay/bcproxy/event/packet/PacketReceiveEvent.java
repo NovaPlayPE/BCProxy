@@ -2,23 +2,23 @@ package net.novaplay.bcproxy.event.packet;
 
 import net.novaplay.bcproxy.event.Cancellable;
 import net.novaplay.bcproxy.event.HandlerList;
-import net.novaplay.bcproxy.player.Player;
+import net.novaplay.bcproxy.server.Server;
 import net.novaplay.library.netty.packet.Packet;
 
-public class PacketReceiveEvent extends PacketEvent implements Cancellable {
+public class PacketReceiveEvent extends PacketEvent{
 
 	private static HandlerList handlers = new HandlerList();
 	
-	private Player player;
+	private Server server;
 	private Packet packet;
 	
-	public PacketReceiveEvent(Player player, Packet packet) {
-		this.player = player;
+	public PacketReceiveEvent(Server server, Packet packet) {
+		this.server = server;
 		this.packet = packet;
 	}
 	
-	public Player getPlayer() {
-		return this.player;
+	public Server getServer() {
+		return this.server;
 	}
 	
 	public Packet getPacket() {

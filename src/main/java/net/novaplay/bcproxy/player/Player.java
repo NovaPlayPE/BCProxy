@@ -8,6 +8,8 @@ import net.novaplay.bcproxy.event.packet.PacketReceiveEvent;
 import net.novaplay.bcproxy.server.Server;
 import net.novaplay.library.netty.packet.Packet;
 import net.novaplay.networking.player.ChatPacket;
+import net.novaplay.networking.player.KickPacket;
+import net.novaplay.networking.player.TransferPacket;
 
 public class Player implements CommandSender{
 
@@ -15,8 +17,13 @@ public class Player implements CommandSender{
 	private UUID uuid;
 	private Server server;
 	private ProxyClient currentServer = null;
-	private boolean isFirstServer = true;
-	private boolean serverBefore = false;
+	
+	public void setCurrentServer(ProxyClient c) { currentServer = c; }
+	public ProxyClient getCurrentServer() { return currentServer; }
+	
+	public boolean isTransfering = false;
+	public ProxyClient transferDestination = null;
+	
 	private boolean isOp = false;
 	
 	public Player(String playerName, UUID uuid, Server server) {
@@ -39,27 +46,60 @@ public class Player implements CommandSender{
 	
 	public void sendMessage(String message) {
 		ChatPacket pk = new ChatPacket();
-		pk.player = this.name.toLowerCase();
-		pk.type = "chat";
+		pk.player = this.name;
+		pk.type = ChatPacket.CHAT;
 		pk.message = message;
+		pk.handled = true;
 		getServer().getSessionManager().sendPacket(pk, getCurrentClient().getServerChannel());
 	}
 	
-	public void kick(String reason) {
+	public void sendTip(String message) {
+		ChatPacket pk = new ChatPacket();
+		pk.player = this.name;
+		pk.type = ChatPacket.TIP;
+		pk.message = message;
+		pk.handled = true;
+		getServer().getSessionManager().sendPacket(pk, getCurrentClient().getServerChannel());
+	}
+	
+	public void sendPopup(String message) {
+		ChatPacket pk = new ChatPacket();
+		pk.player = this.name;
+		pk.type = ChatPacket.POPUP;
+		pk.message = message;
+		pk.handled = true;
+		getServer().getSessionManager().sendPacket(pk, getCurrentClient().getServerChannel());
+	}
+	
+	public void sendTitle(String message) {
+		ChatPacket pk = new ChatPacket();
+		pk.player = this.name;
+		pk.type = ChatPacket.TITLE;
+		pk.message = message;
+		pk.handled = true;
+		getServer().getSessionManager().sendPacket(pk, getCurrentClient().getServerChannel());
+	}
+	
+	public void transfer(ProxyClient client) {
+		TransferPacket pk = new TransferPacket();
+		pk.player = this.getName();
+		pk.destination = client.getServerId();
+		pk.handled = true;
+		getServer().getSessionManager().sendPacket(pk,getCurrentClient().getServerChannel());
+		transferDestination = client;
+		isTransfering = true;
 		
 	}
 	
-	public void sendTitle(String title) {}
-	public void sendTitle(String title, String subtitle) {}
-	
-	
-	public void handleDataPacket(Packet packet) {
-		PacketReceiveEvent e = new PacketReceiveEvent(this,packet);
-		this.server.getPluginManager().callEvent(e);
-		if(e.isCancelled()) {
-			return;
-		}
+	public void kick(String reason) {
+		KickPacket pk = new KickPacket();
+		pk.player = this.getName();
+		pk.reason = reason;
+		pk.handled = true;
+		getServer().getSessionManager().sendPacket(pk,getCurrentClient().getServerChannel());
 	}
+	
+	
 	
 	public String getName() {
 		return this.name;
